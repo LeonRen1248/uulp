@@ -51,4 +51,7 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+# Configuration for VSCode
 .vscode/
+# My test file
+tester.c
