@@ -5,6 +5,8 @@
 
 #define SHOWHOST
 
+void show_info(struct utmp *utbufb);
+
 int main() {
     struct utmp current_record;
     int utmpfd;
