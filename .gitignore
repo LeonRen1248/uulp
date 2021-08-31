@@ -54,4 +54,4 @@ dkms.conf
 # Configuration for VSCode
 .vscode/
 # My test file
-tester.c
+test*
