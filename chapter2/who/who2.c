@@ -1,43 +1,59 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <utmp.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <utmp.h>
 #include <time.h>
-#include <string.h>
 
-#define SHOWHOST
+#define SHOW_HOSTNAME
 
-void show_info(struct utmp *utbufb);
-
-int main() {
-    struct utmp current_record;
-    int utmpfd;
-    int reclen = sizeof(current_record);
-
-    if ((utmpfd = open(UTMP_FILE, O_RDONLY)) == -1) {
-        perror(UTMP_FILE);
-        exit(1);
-    }
-    while (read(utmpfd, &current_record, reclen) == reclen) {
-        show_info(&current_record);
-    }
-    close(utmpfd);
-
-    return 0;
+void show_time(const time_t time_to_show) {
+    char *time_str = ctime(&time_to_show);
+    // Print time like '2021-Sep-1 18:33'
+    printf("%.4s", time_str + 20);
+    printf("-");
+    printf("%.3s", time_str + 4);
+    printf("-");
+    printf("%.1s", time_str + 9);
+    printf(" ");
+    printf("%.5s", time_str + 11);
 }
 
-void show_info(struct utmp *utbufb) {
-    if (utbufb->ut_type != USER_PROCESS)    // Only maintain normal users
+void show_info(struct utmp current_record) {
+    // 显示格式为：
+    // --------------------------------------------
+    // |  用户名  |  终端名  |  登录时间  |  登录地址  |
+    // --------------------------------------------
+    if (current_record.ut_type != USER_PROCESS) {
+        // 识别是否是活动用户（Active users），如果不是，则直接返回
         return;
-    printf("%-8.8s  ", utbufb->ut_user);     // Username
-    printf("%-8.8s  ", utbufb->ut_line);     // Devicename
-    long t = utbufb->ut_tv.tv_sec;
-    char *time_str = ctime(&t);
-    time_str[strlen(time_str) - 1] = '\0';
-    printf("%s  ", time_str);  // Time(sec)
-#ifdef SHOWHOST
-    printf("%s", utbufb->ut_host);          // Hostname
+    }
+    printf("%-10s", current_record.ut_user);
+    printf("  ");
+    printf("%-10s", current_record.ut_line);
+    printf("  ");
+    // 改变时间的显示方式（Absolute time --> Time string in 'ctime' format）
+    const time_t login_time = current_record.ut_tv.tv_sec;
+    show_time(login_time);
+#ifdef SHOW_HOSTNAME
+    printf("  ");
+    printf("%-16s", current_record.ut_host);
 #endif
     printf("\n");
+}
+
+int main(int argc, char const *argv[]) {
+    const char *utmp_filename = "/var/run/utmp";
+    int utmp_fd = 0;
+    if ((utmp_fd = open(utmp_filename, O_RDONLY)) < 0) {
+        fprintf(stderr, "Error open /var/run/utmp.");
+    }
+    struct utmp one_user;
+    int numread = 0;
+    while ((numread = read(utmp_fd, &one_user, sizeof(struct utmp))) > 0) {
+        show_info(one_user);
+    }
+
+    close(utmp_fd);
+
+    return 0;
 }
