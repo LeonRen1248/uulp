@@ -7,11 +7,32 @@
 - more02.c：为了解决 `ls /bin | ./more.out` 不会停止的问题，修改键盘的输入为从 `/dev/tty` 中读取，而不是从标准输入中读取；
 - more03.c：解决了几个问题：
   - 消除重复打印的 ` --more?-- ` ；
+  - 适配了当前终端窗口尺寸；
   - 不需要输入回车即可响应；
   - 使输入的选项不回显；
   - 将回车替换为输入 `n` 表示显示下一行，更符合输入习惯。
 
 ### 参考
+
+#### 适配当前终端窗口尺寸
+
+```c
+struct winsize window_size;
+ioctl(STDIN_FILENO, TIOCGWINSZ, &window_size);
+```
+
+通过上述方式即可得到窗口尺寸，其中 `struct winsize` 的结构为：
+
+```c
+//其中struct winsize位于termios.h头文件内
+//具体位置在 /usr/include/asm-generic/termios.h
+struct winsize {
+    unsigned short ws_row;      // 以字符为单位的行数
+    unsigned short ws_col;      // 以字符为单位的列数
+    unsigned short ws_xpixel;   // 以像素为单位的水平方向尺寸
+    unsigned short ws_ypixel;   // 以像素为单位的竖直方向尺寸
+}
+```
 
 #### 改变光标位置
 
