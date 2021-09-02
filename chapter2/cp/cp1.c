@@ -1,44 +1,64 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdarg.h>
 
-#define BUFFERSIZE 4096
-#define COPYMODE 0644
+#define COPY_MODE 0644
+#define BUFFER_SIZE 4096
 
-void oops(char *s1, char *s2);
-
-int main(int argc, char **argv) {
-    if (argc != 3) {
-        oops("Arguments are less. Please enter enough arguments.", "");
+void oops(int num, ...) {
+    // 其实这个函数没必要这样设计，这里纯粹是为了练习一下可变数量参数（...）的用法
+    va_list ap;
+    va_start(ap, num);
+    fprintf(stderr, "Error: ");
+    for (int i = 0; i < num - 1; i++) {
+        fprintf(stderr, "%s ", va_arg(ap, char *));
     }
-    char buffer[BUFFERSIZE];
-    int in_fd, out_fd;
-    int n_chars;
-    if ((in_fd = open(argv[1], O_RDONLY)) == -1) {
-        oops("Cannot open ", argv[1]);
-    }
-    if ((out_fd = creat(argv[2], COPYMODE)) == -1) {
-        oops("Cannot create ", argv[2]);
-    }
-    while ((n_chars = read(in_fd, buffer, BUFFERSIZE)) > 0) {
-        if (write(out_fd, buffer, n_chars) != n_chars) {
-            oops("Write error to ", argv[2]);
-        }
-    }
-    if (n_chars == -1) {
-        oops("Error read from ", argv[1]);
-    }
-
-    if (close(in_fd) == -1 || close(out_fd) == -1) {
-        oops("Error closing files.", "");
-    }
-    
-    return 0;
+    perror(va_arg(ap, char *));
+    fprintf(stderr, "\n");
+    va_end(ap);
 }
 
-void oops(char *s1, char *s2) {
-    fprintf(stderr, "Error: %s", s1);
-    perror(s2);
-    exit(1);
+
+int main(int argc, char const *argv[]) {
+    char buffer[BUFFER_SIZE];
+
+    if (argc != 3) {
+        fprintf(stderr, "This command has incorrect number of arguments.\n");
+        exit(1);
+    }
+
+    int read_fd = -1, write_fd = -1;
+    if ((read_fd = open(argv[1], O_RDONLY)) == -1) {
+        oops(2, "Cannot open file", argv[1]);
+        goto __ERROR__;
+    }
+    
+    if ((write_fd = creat(argv[2], COPY_MODE)) == -1) {
+        oops(2, "Cannot create file ", argv[2]);
+        goto __ERROR__;
+    }
+
+    int num_read = 0, num_write = 0;
+    while ((num_read = read(read_fd, buffer, BUFFER_SIZE)) > 0) {
+        if ((num_write = write(write_fd, buffer, num_read) != num_read)) {
+            oops(2, "Write error to file ", argv[2]);
+        }
+    }
+
+__ERROR__:
+    if (read_fd != -1) {
+        if ((close(read_fd)) == -1) {
+            oops(2, "Error close file ", argv[1]);
+        }
+    }
+    if (write_fd != -1) {
+        if ((close(write_fd)) == -1) {
+            oops(2, "Error close file ", argv[2]);
+        }
+    }
+
+    return 0;
 }
